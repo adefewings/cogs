@@ -1,4 +1,5 @@
 from django.db import models
+import datetime
 
 # Create your models here.
 class System(models.Model):
@@ -22,7 +23,6 @@ class Institution(models.Model):
 class User(models.Model):
 	username = models.CharField(max_length=64,unique=True, verbose_name="SCW Username")
 	common_name = models.CharField(max_length=128, verbose_name="Common Name")
-	#userID = models.IntegerField(unique=True)
 	email = models.EmailField()
 	disabled = models.BooleanField(default=False)
 	institution = models.ForeignKey(Institution)
@@ -32,7 +32,7 @@ class User(models.Model):
 	def __str__(self):
 		return self.common_name
 
-class FundingSource(models.Model):
+class ProjectFundingSource(models.Model):
 	name = models.CharField(max_length=128, unique=True, verbose_name="Source Name")
 	description = models.CharField(max_length=512)
 	created_time = models.DateTimeField(auto_now_add=True)
@@ -66,12 +66,14 @@ class Project(models.Model):
 	description = models.CharField(max_length=1024, verbose_name="Project Description")
 	pi_name = models.CharField(max_length=128, verbose_name="PI Name")
 	pi_email = models.EmailField(verbose_name="PI Email")
-	tech_lead = models.ForeignKey(User)
-	funding_source = models.ForeignKey(FundingSource)
+	tech_lead = models.ForeignKey(User,related_name='project_as_tech_lead')
+	funding_source = models.ForeignKey(ProjectFundingSource)
 	category = models.ForeignKey(ProjectCategory)
 	institution_reference = models.CharField(max_length=128, verbose_name="Owning institution project reference")
 	start_date = models.DateField()
 	end_date = models.DateField()
+	economic_user = models.BooleanField(default=False)
+	status = models.ForeignKey(ProjectStatus, null=True)
 	requirements_software = models.CharField(max_length=512)
 	requirements_gateways = models.CharField(max_length=512)
 	requirements_training = models.CharField(max_length=512)
@@ -80,7 +82,7 @@ class Project(models.Model):
 	allocation_cputime = models.PositiveIntegerField(verbose_name="CPU time allocation")
 	allocation_storage = models.PositiveIntegerField(verbose_name="Project group storage allocation")
 	allocation_systems = models.ManyToManyField(System, through='ProjectSystemAllocation')
-	users = models.ManyToManyField(User, through='ProjectUserMembership')
+	members = models.ManyToManyField(User, through='ProjectUserMembership')
 	created_time = models.DateTimeField(auto_now_add=True)
 	modified_time = models.DateTimeField(auto_now=True)
 
@@ -99,8 +101,8 @@ class ProjectSystemAllocation(models.Model):
 		return (str(self.project)+" on "+str(self.system)+" from "+str(self.date_allocated)+" to "+str(self.date_unallocated))
 
 class ProjectUserMembership(models.Model):
-	user = models.ForeignKey(User)
 	project = models.ForeignKey(Project)
+	user = models.ForeignKey(User)
 	date_joined = models.DateField()
 	date_left = models.DateField(default=datetime.date.max)
 	created_time = models.DateTimeField(auto_now_add=True)
